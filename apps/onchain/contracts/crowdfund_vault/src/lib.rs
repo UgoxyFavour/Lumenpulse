@@ -1379,7 +1379,11 @@ impl CrowdfundVaultContract {
     }
 
     /// Internal function to invest funds
-    fn invest_funds_internal(env: &Env, project_id: u64, amount: i128) -> Result<(), CrowdfundError> {
+    fn invest_funds_internal(
+        env: &Env,
+        project_id: u64,
+        amount: i128,
+    ) -> Result<(), CrowdfundError> {
         let project: ProjectData = env
             .storage()
             .persistent()
@@ -1421,7 +1425,11 @@ impl CrowdfundVaultContract {
     }
 
     /// Internal function to divest funds
-    fn divest_funds_internal(env: &Env, project_id: u64, amount: i128) -> Result<(), CrowdfundError> {
+    fn divest_funds_internal(
+        env: &Env,
+        project_id: u64,
+        amount: i128,
+    ) -> Result<(), CrowdfundError> {
         let project: ProjectData = env
             .storage()
             .persistent()

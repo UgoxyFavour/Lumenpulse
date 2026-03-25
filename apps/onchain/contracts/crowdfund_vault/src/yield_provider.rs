@@ -1,5 +1,6 @@
 use soroban_sdk::{contractclient, Address, Env};
 
+#[allow(dead_code)]
 #[contractclient(name = "YieldProviderClient")]
 pub trait YieldProviderTrait {
     /// Deposit funds into the yield provider

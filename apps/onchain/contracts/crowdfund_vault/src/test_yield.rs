@@ -2,7 +2,7 @@ use crate::yield_provider::YieldProviderTrait;
 use crate::{CrowdfundVaultContract, CrowdfundVaultContractClient};
 use soroban_sdk::{
     contract, contractimpl, symbol_short,
-    testutils::{Address as _},
+    testutils::Address as _,
     token::{StellarAssetClient, TokenClient},
     Address, Env,
 };
@@ -13,14 +13,20 @@ pub struct MockYieldProvider;
 #[contractimpl]
 impl MockYieldProvider {
     pub fn initialize(env: Env, token: Address) {
-        env.storage().instance().set(&symbol_short!("token"), &token);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("token"), &token);
     }
 }
 
 #[contractimpl]
 impl YieldProviderTrait for MockYieldProvider {
     fn deposit(env: Env, from: Address, amount: i128) {
-        let _token_addr: Address = env.storage().instance().get(&symbol_short!("token")).unwrap();
+        let _token_addr: Address = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("token"))
+            .unwrap();
         // In a real provider, this would transfer tokens FROM the contract to itself
         // but since the vault already transferred them to us in `invest_funds_internal`,
         // we just track the balance.
@@ -29,17 +35,21 @@ impl YieldProviderTrait for MockYieldProvider {
     }
 
     fn withdraw(env: Env, to: Address, amount: i128) {
-        let token_addr: Address = env.storage().instance().get(&symbol_short!("token")).unwrap();
+        let token_addr: Address = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("token"))
+            .unwrap();
         let token = TokenClient::new(&env, &token_addr);
-        
+
         let current: i128 = env.storage().persistent().get(&to).unwrap_or(0);
         if current < amount {
             panic!("insufficient balance in mock");
         }
-        
+
         // Transfer tokens back to the vault
         token.transfer(&env.current_contract_address(), &to, &amount);
-        
+
         env.storage().persistent().set(&to, &(current - amount));
     }
 
@@ -117,7 +127,7 @@ fn test_yield_investment_and_withdrawal() {
     // Verify balances
     // Project balance should still be 500_000 (total claimable)
     assert_eq!(client.get_balance(&project_id), 500_000);
-    
+
     // Check contract's actual token balance
     // 500_000 deposited - 300_000 invested = 200_000 remaining in vault
     assert_eq!(token_client.balance(&client.address), 200_000);
@@ -132,8 +142,8 @@ fn test_yield_investment_and_withdrawal() {
     // Verify final balances
     assert_eq!(client.get_balance(&project_id), 100_000);
     assert_eq!(token_client.balance(&owner), 400_000);
-    
-    // Vault should have 100_000 left? 
+
+    // Vault should have 100_000 left?
     // Wait: 200_000 (local) + 200_000 (divested) - 400_000 (withdrawn) = 0 local
     // But there's still 100_000 invested.
     assert_eq!(token_client.balance(&client.address), 0);
