@@ -35,11 +35,53 @@ export class NewsController {
   @ApiOperation({ summary: 'Get latest crypto news articles' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
   @ApiQuery({ name: 'lang', required: false, type: String, example: 'EN' })
+  @ApiQuery({
+    name: 'tag',
+    required: false,
+    type: String,
+    example: 'stellar',
+    description: 'Filter by article tag',
+  })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    type: String,
+    example: 'DeFi',
+    description: 'Filter by article category',
+  })
   @ApiResponse({ status: 200, type: NewsArticlesResponseDto })
   async getLatestArticles(
     @Query('limit') limit?: string,
     @Query('lang') lang?: string,
+    @Query('tag') tag?: string,
+    @Query('category') category?: string,
   ): Promise<NewsArticlesResponseDto> {
+    if (tag || category) {
+      const articles = await this.newsService.findAll({ tag, category });
+      return {
+        articles: articles.map((a) => ({
+          id: a.id,
+          guid: '',
+          title: a.title,
+          subtitle: null,
+          body: '',
+          url: a.url,
+          imageUrl: null,
+          authors: '',
+          source: a.source,
+          sourceKey: '',
+          sourceImageUrl: null,
+          categories: a.category ? [a.category] : [],
+          keywords: a.tags ?? [],
+          sentiment: 'NEUTRAL',
+          publishedAt: a.publishedAt.toISOString(),
+          relatedCoins: [],
+        })),
+        totalCount: articles.length,
+        fetchedAt: new Date().toISOString(),
+      };
+    }
+
     return this.newsProviderService.getLatestArticles({
       limit: limit ? parseInt(limit, 10) : undefined,
       lang,
