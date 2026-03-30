@@ -20,8 +20,12 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   GetPortfolioHistoryDto,
   PortfolioHistoryResponseDto,
-  PortfolioSummaryResponseDto,
 } from './dto/portfolio-snapshot.dto';
+import {
+  GetPortfolioSummaryQueryDto,
+  PortfolioSummaryWithCurrencyResponseDto,
+  CurrencyCode,
+} from './dto/portfolio-currency.dto';
 import { PortfolioPerformanceResponseDto } from './dto/portfolio-performance.dto';
 
 @ApiTags('portfolio')
@@ -35,20 +39,31 @@ export class PortfolioController {
   @ApiOperation({
     summary: 'Get portfolio summary',
     description:
-      'Returns the latest portfolio snapshot with total USD value and individual asset balances',
+      'Returns the latest portfolio snapshot with total value in specified currency and individual asset balances',
+  })
+  @ApiQuery({
+    name: 'currency',
+    required: false,
+    enum: CurrencyCode,
+    description: 'Target currency for portfolio valuation (default: USD)',
   })
   @ApiResponse({
     status: 200,
     description: 'Portfolio summary retrieved successfully',
-    type: PortfolioSummaryResponseDto,
+    type: PortfolioSummaryWithCurrencyResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getPortfolioSummary(
     @Request() req: any,
-  ): Promise<PortfolioSummaryResponseDto> {
+    @Query() query: GetPortfolioSummaryQueryDto,
+  ): Promise<PortfolioSummaryWithCurrencyResponseDto> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const userId = req.user.sub as string;
-    return this.portfolioService.getPortfolioSummary(userId);
+    const currency = query.currency || CurrencyCode.USD;
+    return this.portfolioService.getPortfolioSummaryInCurrency(
+      userId,
+      currency,
+    );
   }
 
   @Get('history')
