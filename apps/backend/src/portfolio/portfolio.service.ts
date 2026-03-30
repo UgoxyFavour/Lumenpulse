@@ -11,8 +11,14 @@ import {
   PortfolioSnapshotDto,
   PortfolioSummaryResponseDto,
 } from './dto/portfolio-snapshot.dto';
+import {
+  PortfolioSummaryWithCurrencyResponseDto,
+  AssetBalanceWithCurrencyDto,
+  CurrencyCode,
+} from './dto/portfolio-currency.dto';
 import { PortfolioPerformanceResponseDto } from './dto/portfolio-performance.dto';
 import { calculatePortfolioPerformance } from './utils/portfolio-performance.utils';
+import { ExchangeRatesService } from '../exchange-rates/exchange-rates.service';
 
 @Injectable()
 export class PortfolioService {
@@ -26,6 +32,7 @@ export class PortfolioService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly stellarBalanceService: StellarBalanceService,
+    private readonly exchangeRatesService: ExchangeRatesService,
   ) {}
 
   /**
@@ -191,6 +198,69 @@ export class PortfolioService {
       assets: latestSnapshot.assetBalances,
       lastUpdated: latestSnapshot.createdAt,
       hasLinkedAccount: true,
+    };
+  }
+
+  /**
+   * Get portfolio summary in a specific currency
+   */
+  async getPortfolioSummaryInCurrency(
+    userId: string,
+    currency: CurrencyCode = CurrencyCode.USD,
+  ): Promise<PortfolioSummaryWithCurrencyResponseDto> {
+    this.logger.log(
+      `Fetching portfolio summary for user ${userId} in currency ${currency}`,
+    );
+
+    // Get base USD summary
+    const usdSummary = await this.getPortfolioSummary(userId);
+
+    // If USD or no assets, return as is
+    if (currency === CurrencyCode.USD || usdSummary.assets.length === 0) {
+      return {
+        totalValue: usdSummary.totalValueUsd,
+        currency: CurrencyCode.USD,
+        totalValueUsd: usdSummary.totalValueUsd,
+        assets: usdSummary.assets.map((asset) => ({
+          assetCode: asset.assetCode,
+          assetIssuer: asset.assetIssuer,
+          amount: asset.amount,
+          value: asset.valueUsd,
+          valueUsd: asset.valueUsd,
+        })),
+        lastUpdated: usdSummary.lastUpdated,
+        hasLinkedAccount: usdSummary.hasLinkedAccount,
+        exchangeRate: 1,
+      };
+    }
+
+    // Convert to requested currency
+    const totalUsd = parseFloat(usdSummary.totalValueUsd);
+    const exchangeRate = await this.exchangeRatesService.getExchangeRate(
+      CurrencyCode.USD,
+      currency,
+    );
+
+    const convertedTotal = Math.round(totalUsd * exchangeRate * 100) / 100;
+
+    const convertedAssets: AssetBalanceWithCurrencyDto[] = usdSummary.assets.map(
+      (asset) => ({
+        assetCode: asset.assetCode,
+        assetIssuer: asset.assetIssuer,
+        amount: asset.amount,
+        value: Math.round(asset.valueUsd * exchangeRate * 100) / 100,
+        valueUsd: asset.valueUsd,
+      }),
+    );
+
+    return {
+      totalValue: convertedTotal.toFixed(2),
+      currency,
+      totalValueUsd: usdSummary.totalValueUsd,
+      assets: convertedAssets,
+      lastUpdated: usdSummary.lastUpdated,
+      hasLinkedAccount: usdSummary.hasLinkedAccount,
+      exchangeRate,
     };
   }
 

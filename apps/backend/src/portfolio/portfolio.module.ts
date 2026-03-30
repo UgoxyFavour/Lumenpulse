@@ -7,10 +7,12 @@ import { User } from '../users/entities/user.entity';
 import { PortfolioService } from './portfolio.service';
 import { PortfolioController } from './portfolio.controller';
 import { StellarBalanceService } from './stellar-balance.service';
+import { ExchangeRatesModule } from '../exchange-rates/exchange-rates.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([PortfolioAsset, PortfolioSnapshot, User]),
+    ExchangeRatesModule,
   ],
   controllers: [PortfolioController],
   providers: [PortfolioService, StellarBalanceService],
